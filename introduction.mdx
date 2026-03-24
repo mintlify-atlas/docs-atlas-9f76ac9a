@@ -27,14 +27,14 @@ Your application code only calls one function — the SDK handles the full flow.
 
 Restash supports two upload modes depending on how much control you need over who can upload.
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card title="Public key uploads" icon="key">
     Pass your `publicKey` to `createRestashUploader`. Anyone with access to your front-end code can upload. Suitable for internal tools, prototypes, or applications with their own auth layer.
   </Card>
   <Card title="Signed uploads" icon="shield-check">
     Your server generates an HMAC-SHA256 signature using `generateSig` and your secret key. The SDK sends this signature with the prepare request so Restash can verify the upload is authorized. Use this for production apps where you want server-side control.
   </Card>
-</Columns>
+</CardGroup>
 
 <Warning>
   Never use your secret key (`sk_...`) in browser code. Pass it only to `generateSig` on the server. The SDK throws an error if it detects a secret key in `createRestashUploader`.

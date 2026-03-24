@@ -31,11 +31,11 @@ Generates a secure upload signature using your Restash secret key. The signature
 
 ## Error cases
 
-| Condition | Error thrown |
+| Condition | Error message |
 | --- | --- |
-| `secretKey` is missing or empty | Throws: secret key is required |
-| `secretKey` starts with `pk_` | Throws: use your secret key, not your public key |
-| Called in a browser environment | Throws: generateSig must be called server-side |
+| `secretKey` is missing or empty | `"Secret key is required"` |
+| `secretKey` starts with `pk_` | `"Secret key is invalid. You are currently using a public key"` |
+| Called in a browser environment | `"Secret key should not be used in the browser. Please only use it in a server environment."` |
 
 ## Usage
 
@@ -44,8 +44,8 @@ The typical pattern is to expose a server route that calls `generateSig` and ret
 <CodeGroup>
 
 ```typescript Next.js App Router
-// app/api/restash-signature/route.ts
-import { generateSig } from 'restash';
+// app/api/restash/signature/route.ts
+import { generateSig } from '@restash/restash-js';
 
 export async function GET() {
   const { payload, signature } = generateSig(process.env.RESTASH_SECRET_KEY!);
@@ -55,9 +55,9 @@ export async function GET() {
 ```
 
 ```typescript Next.js Pages Router
-// pages/api/restash-signature.ts
+// pages/api/restash/signature.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateSig } from 'restash';
+import { generateSig } from '@restash/restash-js';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { payload, signature } = generateSig(process.env.RESTASH_SECRET_KEY!);
@@ -67,16 +67,18 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 ```
 
 ```typescript Express
-// server.ts
-import express from 'express';
-import { generateSig } from 'restash';
+// routes/restash.ts
+import { Router } from 'express';
+import { generateSig } from '@restash/restash-js';
 
-const app = express();
+const router = Router();
 
-app.get('/api/restash-signature', (req, res) => {
+router.get('/api/restash/signature', (req, res) => {
   const { payload, signature } = generateSig(process.env.RESTASH_SECRET_KEY!);
   res.json({ payload, signature });
 });
+
+export default router;
 ```
 
 </CodeGroup>
@@ -84,11 +86,11 @@ app.get('/api/restash-signature', (req, res) => {
 Then pass the route URL to your uploader on the client:
 
 ```typescript
-import { createRestashUploader } from 'restash';
+import { createRestashUploader } from '@restash/restash-js';
 
 const upload = createRestashUploader({
   publicKey: 'pk_live_abc123',
-  handleSignature: '/api/restash-signature',
+  handleSignature: '/api/restash/signature',
 });
 ```
 

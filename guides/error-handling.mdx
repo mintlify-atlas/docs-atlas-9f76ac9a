@@ -184,5 +184,5 @@ try {
 ```
 
 <Tip>
-  Errors thrown during uploader construction (invalid/missing public key, wrong key type) are programmer errors and will fire synchronously when `createRestashUploader` is called — typically at module load time. Errors thrown during an upload call are async and must be caught in the `try/catch` wrapping `await upload(file)`.
+  All SDK errors — including invalid/missing public key and wrong key type — are thrown inside the async upload function, not during `createRestashUploader` itself. This means all errors (even configuration mistakes) surface inside the `try/catch` wrapping `await upload(file)`.
 </Tip>

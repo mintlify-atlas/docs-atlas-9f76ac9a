@@ -4,7 +4,7 @@ description: Creates a browser-side file uploader instance authenticated with yo
 ---
 
 ```typescript
-creatRestashUploader(options: RestashUploaderOptions): (file: File | Blob, options?: UploadOptions) => Promise<UploadResult>
+createRestashUploader(options: RestashUploaderOptions): (file: File | Blob, options?: UploadOptions) => Promise<UploadResult>
 ```
 
 Creates a file uploader function that uploads directly to Restash from the browser. Call `createRestashUploader` once with your configuration to get back an `upload` function, then call that function for each file you want to upload.
@@ -87,18 +87,18 @@ Returns a `Promise<UploadResult>` that resolves when the upload completes.
 
 ## Error cases
 
-| Condition | Error thrown |
+| Condition | Error message |
 | --- | --- |
-| `publicKey` is missing or empty | Throws: public key is required |
-| `publicKey` starts with `sk_` | Throws: use your public key, not your secret key |
-| `file` is not a `File` or `Blob` | Throws: file must be a File or Blob |
+| `publicKey` is missing or empty | `"Public key is required"` |
+| `publicKey` starts with `sk_` | `"Public key is invalid. You are currently using a secret key"` |
+| `file` is not a `File` or `Blob` | `"Invalid file passed in. Please pass in a File or Blob"` |
 
 ## Usage
 
 <CodeGroup>
 
 ```typescript Basic upload
-import { createRestashUploader } from 'restash';
+import { createRestashUploader } from '@restash/restash-js';
 
 const upload = createRestashUploader({
   publicKey: 'pk_live_abc123',
@@ -114,7 +114,8 @@ const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
 ```
 
 ```typescript With progress and metadata
-import { createRestashUploader, UploadProgress } from 'restash';
+import { createRestashUploader } from '@restash/restash-js';
+import type { UploadProgress } from '@restash/restash-js';
 
 const upload = createRestashUploader({
   publicKey: 'pk_live_abc123',
@@ -138,7 +139,7 @@ const handleUpload = async (file: File) => {
 ```
 
 ```typescript With signature enforcement
-import { createRestashUploader } from 'restash';
+import { createRestashUploader } from '@restash/restash-js';
 
 const upload = createRestashUploader({
   publicKey: 'pk_live_abc123',
