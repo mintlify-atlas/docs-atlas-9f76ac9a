@@ -1,0 +1,188 @@
+---
+title: Error Handling
+description: A complete reference for every error thrown by the Restash JS SDK, with patterns for catching and responding to them.
+---
+
+All errors thrown by `@restash/restash-js` are standard JavaScript `Error` objects. Wrap upload calls in `try/catch` to handle them gracefully.
+
+## Basic pattern
+
+```typescript
+import { createRestashUploader } from "@restash/restash-js";
+
+const upload = createRestashUploader({
+  publicKey: process.env.NEXT_PUBLIC_RESTASH_PUBLIC_KEY!,
+});
+
+try {
+  const result = await upload(file);
+  console.log(result.url);
+} catch (err) {
+  if (err instanceof Error) {
+    console.error(err.message);
+  }
+}
+```
+
+## Complete error reference
+
+<AccordionGroup>
+
+  <Accordion title='"Public key is required"'>
+    **Thrown by:** `createRestashUploader`
+
+    **Cause:** The `publicKey` option was not provided or was an empty string.
+
+    ```typescript
+    // Throws
+    const upload = createRestashUploader({ publicKey: "" });
+    ```
+
+    **Fix:** Pass a valid `pk_...` key from your Restash dashboard.
+  </Accordion>
+
+  <Accordion title='"Public key is invalid. You are currently using a secret key"'>
+    **Thrown by:** `createRestashUploader`
+
+    **Cause:** A key beginning with `sk_` was passed as `publicKey`.
+
+    ```typescript
+    // Throws
+    const upload = createRestashUploader({
+      publicKey: "sk_live_abc123", // wrong — this is a secret key
+    });
+    ```
+
+    **Fix:** Use your `pk_...` public key for `createRestashUploader`. Secret keys must only be used server-side with `generateSig`.
+  </Accordion>
+
+  <Accordion title='"Invalid file passed in. Please pass in a File or Blob"'>
+    **Thrown by:** The upload function returned by `createRestashUploader`
+
+    **Cause:** The first argument to the upload function was not a `File` or `Blob` instance.
+
+    ```typescript
+    // Throws
+    await upload("/path/to/file.png" as any);
+
+    // Also throws
+    await upload(null as any);
+    ```
+
+    **Fix:** Always pass a `File` (from an `<input type="file">` or `FileList`) or a `Blob`.
+
+    ```typescript
+    const file = inputElement.files?.[0];
+    if (file) await upload(file);
+    ```
+  </Accordion>
+
+  <Accordion title="Signature endpoint errors">
+    **Thrown by:** The upload function, when `handleSignature` is configured
+
+    The SDK throws in two situations when fetching your signature route:
+
+    - **Non-OK HTTP response** — the fetch response status was not in the 2xx range.
+    - **Missing fields** — the response JSON did not include both `signature` and `payload`.
+
+    ```typescript
+    // Your signature route must return:
+    // { payload: string; signature: string }
+    ```
+
+    **Fix:** Ensure your signature endpoint returns HTTP 200 with a JSON body containing both fields. Check server logs if the fetch fails.
+  </Accordion>
+
+  <Accordion title="Prepare endpoint errors">
+    **Thrown by:** The upload function, during the prepare step
+
+    After the prepare request to `https://api.restash.io/v1/uploads/prepare`, the SDK throws if:
+
+    - The response is missing `url`, `fields`, or `confirmToken`.
+    - The server returned an error message in the response body.
+
+    The error message will be the server-provided message when available.
+
+    **Fix:** Check that your public key is correct and active. If the server returns an explicit error message, it will surface directly in the thrown error.
+  </Accordion>
+
+  <Accordion title='"Secret key is required" (generateSig)'>
+    **Thrown by:** `generateSig`
+
+    **Cause:** `generateSig` was called without a `secretKey` argument or with an empty string.
+
+    ```typescript
+    // Throws
+    generateSig("");
+    ```
+
+    **Fix:** Pass your `RESTASH_SECRET_KEY` environment variable.
+
+    ```typescript
+    generateSig(process.env.RESTASH_SECRET_KEY!);
+    ```
+  </Accordion>
+
+  <Accordion title='"Secret key is invalid. You are currently using a public key" (generateSig)'>
+    **Thrown by:** `generateSig`
+
+    **Cause:** A key beginning with `pk_` was passed to `generateSig`.
+
+    ```typescript
+    // Throws
+    generateSig("pk_live_abc123"); // wrong — this is a public key
+    ```
+
+    **Fix:** Pass the `sk_...` secret key to `generateSig`, not the public key.
+  </Accordion>
+
+  <Accordion title='"Secret key should not be used in the browser..." (generateSig)'>
+    **Thrown by:** `generateSig`
+
+    **Cause:** `generateSig` was called in a browser environment. The SDK detects this and refuses to proceed to prevent secret key exposure.
+
+    **Fix:** Move the `generateSig` call to a server-side route. See [Signed Uploads](/guides/signed-uploads) for a full setup guide.
+  </Accordion>
+
+</AccordionGroup>
+
+## Common mistakes
+
+<Warning>
+  **Using a secret key as the public key.** If your key starts with `sk_`, it is a secret key and must never be used in the browser. Pass it only to `generateSig` on the server. `createRestashUploader` will throw immediately if it detects an `sk_` key.
+</Warning>
+
+<Warning>
+  **Calling `generateSig` in the browser.** The SDK throws to prevent this. Always call `generateSig` inside a server route (Next.js API route, Express handler, etc.) and return only `{ payload, signature }` to the client.
+</Warning>
+
+## Network error handling
+
+Network failures (DNS errors, timeouts, connection resets) are not thrown as SDK-specific errors — they surface as whatever axios or `fetch` throws natively. Handle them alongside SDK errors:
+
+```typescript
+try {
+  const result = await upload(file, {
+    onProgress: ({ percent }) => setProgress(percent),
+  });
+  return result;
+} catch (err) {
+  if (err instanceof Error) {
+    // SDK validation errors, prepare errors, signature errors,
+    // and network errors all surface here
+    console.error("Upload failed:", err.message);
+
+    if (err.message.includes("secret key")) {
+      // Misconfigured key — fix at setup time, not runtime
+      throw err;
+    }
+
+    // Retry or show user-facing error
+    showError("Upload failed. Please check your connection and try again.");
+  }
+}
+```
+
+<Tip>
+  Errors thrown during uploader construction (invalid/missing public key, wrong key type) are programmer errors and will fire synchronously when `createRestashUploader` is called — typically at module load time. Errors thrown during an upload call are async and must be caught in the `try/catch` wrapping `await upload(file)`.
+</Tip>

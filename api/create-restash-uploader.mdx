@@ -1,0 +1,151 @@
+---
+title: createRestashUploader
+description: Creates a browser-side file uploader instance authenticated with your Restash public API key.
+---
+
+```typescript
+creatRestashUploader(options: RestashUploaderOptions): (file: File | Blob, options?: UploadOptions) => Promise<UploadResult>
+```
+
+Creates a file uploader function that uploads directly to Restash from the browser. Call `createRestashUploader` once with your configuration to get back an `upload` function, then call that function for each file you want to upload.
+
+<Warning>
+Always use your **public** API key (`pk_...`) here. Never use your secret key on the client.
+</Warning>
+
+## Parameters
+
+<ParamField body="publicKey" type="string" required>
+  Your Restash public API key. Must start with `pk_`. This is required to authenticate the upload request.
+</ParamField>
+
+<ParamField body="handleSignature" type="string">
+  The URL of your server route that returns a signature and payload. Only required if your team has signature enforcement enabled. See [`generateSig`](/api/generate-sig) for how to implement this route.
+</ParamField>
+
+## Upload function parameters
+
+The returned function accepts the following arguments:
+
+<ParamField body="file" type="File | Blob" required>
+  The file or blob to upload.
+</ParamField>
+
+<ParamField body="options" type="UploadOptions">
+  Optional upload configuration.
+
+  <Expandable title="properties">
+    <ParamField body="name" type="string">
+      Override the file name. If not provided, the original file name is used. If the file is a `Blob` and this is not provided, a random string is generated.
+    </ParamField>
+
+    <ParamField body="path" type="string">
+      Path prefix that determines the folder or directory the file is uploaded to.
+    </ParamField>
+
+    <ParamField body="onProgress" type="({ percent, loaded, total }: UploadProgress) => void">
+      Callback that receives real-time upload progress data. Useful for rendering a progress bar or percentage indicator.
+    </ParamField>
+
+    <ParamField body="metadata" type="Record<string, string>">
+      Key-value pairs to associate with the uploaded file.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return value
+
+Returns a `Promise<UploadResult>` that resolves when the upload completes.
+
+<ResponseField name="id" type="string" required>
+  Unique identifier of the uploaded file.
+</ResponseField>
+
+<ResponseField name="url" type="string" required>
+  Public CDN URL of the uploaded file.
+</ResponseField>
+
+<ResponseField name="key" type="string" required>
+  Storage key (path) assigned to the file.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Original file name.
+</ResponseField>
+
+<ResponseField name="size" type="number" required>
+  File size in bytes.
+</ResponseField>
+
+<ResponseField name="contentType" type="string" required>
+  MIME type of the file.
+</ResponseField>
+
+<ResponseField name="metadata" type="Record<string, string> | null" required>
+  Any additional metadata associated with the file. `null` if no metadata was provided.
+</ResponseField>
+
+## Error cases
+
+| Condition | Error thrown |
+| --- | --- |
+| `publicKey` is missing or empty | Throws: public key is required |
+| `publicKey` starts with `sk_` | Throws: use your public key, not your secret key |
+| `file` is not a `File` or `Blob` | Throws: file must be a File or Blob |
+
+## Usage
+
+<CodeGroup>
+
+```typescript Basic upload
+import { createRestashUploader } from 'restash';
+
+const upload = createRestashUploader({
+  publicKey: 'pk_live_abc123',
+});
+
+const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const result = await upload(file);
+  console.log('Uploaded to:', result.url);
+};
+```
+
+```typescript With progress and metadata
+import { createRestashUploader, UploadProgress } from 'restash';
+
+const upload = createRestashUploader({
+  publicKey: 'pk_live_abc123',
+});
+
+const handleUpload = async (file: File) => {
+  const result = await upload(file, {
+    name: 'profile-photo.jpg',
+    path: 'users/avatars',
+    metadata: {
+      userId: 'usr_123',
+      source: 'profile-settings',
+    },
+    onProgress: ({ percent, loaded, total }: UploadProgress) => {
+      console.log(`${percent}% uploaded (${loaded} / ${total} bytes)`);
+    },
+  });
+
+  return result.url;
+};
+```
+
+```typescript With signature enforcement
+import { createRestashUploader } from 'restash';
+
+const upload = createRestashUploader({
+  publicKey: 'pk_live_abc123',
+  handleSignature: '/api/restash-signature',
+});
+
+const result = await upload(file);
+```
+
+</CodeGroup>

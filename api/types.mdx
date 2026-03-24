@@ -1,0 +1,139 @@
+---
+title: Types
+description: TypeScript type definitions exported by the Restash JS SDK.
+---
+
+All types below are exported from the `restash` package and can be imported directly.
+
+```typescript
+import type {
+  RestashUploaderOptions,
+  UploadOptions,
+  UploadProgress,
+  UploadResult,
+} from 'restash';
+```
+
+---
+
+## RestashUploaderOptions
+
+Options passed to [`createRestashUploader`](/api/create-restash-uploader) to configure the uploader instance.
+
+```typescript
+type RestashUploaderOptions = {
+  publicKey: string;
+  handleSignature?: string;
+};
+```
+
+<ResponseField name="publicKey" type="string" required>
+  Your Restash public API key. This is required to authenticate the upload request.
+</ResponseField>
+
+<ResponseField name="handleSignature" type="string">
+  The URL of your server route that returns a signature and payload. Only required if your team has signature enforcement enabled.
+</ResponseField>
+
+---
+
+## UploadOptions
+
+Per-upload options passed as the second argument to the function returned by `createRestashUploader`.
+
+```typescript
+type UploadOptions = {
+  name?: string;
+  path?: string;
+  onProgress?: ({ percent, loaded, total }: UploadProgress) => void;
+  metadata?: Record<string, string>;
+};
+```
+
+<ResponseField name="name" type="string">
+  Optional override for the file name. If not provided, the original file name is used. If the file is a `Blob` and this is not provided, a random string is generated.
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Optional path prefix that determines the folder or directory the file is uploaded to.
+</ResponseField>
+
+<ResponseField name="onProgress" type="({ percent, loaded, total }: UploadProgress) => void">
+  Optional callback that receives real-time upload progress data. Useful for showing a progress bar or percentage.
+</ResponseField>
+
+<ResponseField name="metadata" type="Record<string, string>">
+  Optional key-value pairs to associate with the uploaded file.
+</ResponseField>
+
+---
+
+## UploadProgress
+
+Passed to the `onProgress` callback during an active upload.
+
+```typescript
+type UploadProgress = {
+  percent: number;
+  loaded: number;
+  total: number;
+};
+```
+
+<ResponseField name="percent" type="number" required>
+  Percentage of the upload completed, from `0` to `100`.
+</ResponseField>
+
+<ResponseField name="loaded" type="number" required>
+  Number of bytes uploaded so far.
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Total number of bytes to be uploaded.
+</ResponseField>
+
+---
+
+## UploadResult
+
+Returned by the upload function when an upload completes successfully.
+
+```typescript
+type UploadResult = {
+  id: string;
+  url: string;
+  key: string;
+  name: string;
+  size: number;
+  contentType: string;
+  metadata: Record<string, string> | null;
+};
+```
+
+<ResponseField name="id" type="string" required>
+  Unique identifier of the uploaded file.
+</ResponseField>
+
+<ResponseField name="url" type="string" required>
+  Public CDN URL of the uploaded file.
+</ResponseField>
+
+<ResponseField name="key" type="string" required>
+  Storage key (path) assigned to the file.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Original file name.
+</ResponseField>
+
+<ResponseField name="size" type="number" required>
+  File size in bytes.
+</ResponseField>
+
+<ResponseField name="contentType" type="string" required>
+  MIME type of the file.
+</ResponseField>
+
+<ResponseField name="metadata" type="Record<string, string> | null" required>
+  Any additional metadata associated with the file. `null` if no metadata was provided.
+</ResponseField>

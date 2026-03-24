@@ -1,0 +1,141 @@
+---
+title: Signed Uploads
+description: Protect your uploads with server-side signatures to enforce access control and prevent unauthorized use of your public key.
+---
+
+By default, anyone who obtains your public key can upload files to your Restash account. Signed uploads add a server-side signature step that gives you full control over which uploads are authorized.
+
+<Note>
+  Signed uploads require a backend that can securely access your `RESTASH_SECRET_KEY`. The signature must always be generated server-side.
+</Note>
+
+## How it works
+
+When `handleSignature` is configured, the uploader fetches your signature endpoint before every upload. Your server calls `generateSig` with your secret key and returns a short-lived `{ payload, signature }` pair. These are forwarded to the Restash prepare API to prove the upload was authorized by your server.
+
+```
+Browser → Your server (/api/restash/signature) → Restash API
+```
+
+## Setup
+
+<Steps>
+
+### Install the SDK on your server
+
+`generateSig` is a server-only export. Install `@restash/restash-js` in your backend (or full-stack) project.
+
+```bash
+npm install @restash/restash-js
+```
+
+### Create the signature endpoint
+
+Add a route that calls `generateSig` with your secret key and returns the result as JSON.
+
+<CodeGroup>
+
+```typescript Next.js App Router
+// app/api/restash/signature/route.ts
+import { generateSig } from "@restash/restash-js";
+
+export async function GET() {
+  const { payload, signature } = generateSig(
+    process.env.RESTASH_SECRET_KEY!
+  );
+
+  return Response.json({ payload, signature });
+}
+```
+
+```typescript Next.js Pages Router
+// pages/api/restash/signature.ts
+import type { NextApiRequest, NextApiResponse } from "next";
+import { generateSig } from "@restash/restash-js";
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { payload, signature } = generateSig(
+    process.env.RESTASH_SECRET_KEY!
+  );
+
+  res.status(200).json({ payload, signature });
+}
+```
+
+```typescript Express
+// routes/restash.ts
+import { Router } from "express";
+import { generateSig } from "@restash/restash-js";
+
+const router = Router();
+
+router.get("/api/restash/signature", (req, res) => {
+  const { payload, signature } = generateSig(
+    process.env.RESTASH_SECRET_KEY!
+  );
+
+  res.json({ payload, signature });
+});
+
+export default router;
+```
+
+</CodeGroup>
+
+### Configure the uploader with `handleSignature`
+
+Pass the URL of your signature route to `createRestashUploader`. The SDK will fetch it automatically before each upload.
+
+```typescript
+import { createRestashUploader } from "@restash/restash-js";
+
+const upload = createRestashUploader({
+  publicKey: process.env.NEXT_PUBLIC_RESTASH_PUBLIC_KEY!,
+  handleSignature: "/api/restash/signature",
+});
+```
+
+### Upload a file
+
+The upload call is identical to unsigned uploads. Signature fetching is handled transparently.
+
+```typescript
+const result = await upload(file);
+console.log(result.url);
+```
+
+</Steps>
+
+## Security considerations
+
+<Warning>
+  **Never call `generateSig` in the browser.** The SDK enforces this — it throws `"Secret key should not be used in the browser..."` if called in a browser environment. Exposing your secret key in client-side code allows anyone to forge signatures.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Protect the signature route" icon="lock">
+    Add authentication to your `/api/restash/signature` endpoint so only logged-in users can obtain a signature. Without this, the protection offered by signed uploads is limited.
+  </Card>
+  <Card title="Keep keys in environment variables" icon="key">
+    Store `RESTASH_SECRET_KEY` only in server-side environment variables (e.g. `.env.local` in Next.js). Never prefix it with `NEXT_PUBLIC_` or expose it to the client bundle.
+  </Card>
+  <Card title="Signatures are single-use" icon="clock">
+    Each `generateSig` call produces a unique `requestId` and timestamp. Signatures cannot be replayed across multiple upload requests.
+  </Card>
+  <Card title="Public key is still required" icon="circle-check">
+    The `publicKey` identifies your project. It starts with `pk_` and is safe to expose to the browser. Your `sk_` secret key must never leave the server.
+  </Card>
+</CardGroup>
+
+## Signature payload format
+
+`generateSig` builds its payload internally using a UUID and the current timestamp:
+
+```
+{requestId}:{timestamp}
+```
+
+The payload and an HMAC-SHA256 signature derived from your secret key are both sent to the Restash API during the prepare step. You do not need to construct or validate this manually.

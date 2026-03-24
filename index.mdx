@@ -1,97 +1,73 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Restash JS"
+description: "The official browser SDK for uploading files directly from the browser to Restash."
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Upload your first file in under 5 minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Signed Uploads" icon="shield-check" href="/guides/signed-uploads">
+    Secure uploads with server-side HMAC signatures.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Progress Tracking" icon="chart-line" href="/guides/progress-tracking">
+    Show real-time upload progress to your users.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api/create-restash-uploader">
+    Explore the full API surface.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Restash JS?
 
-Everything you need to create world-class documentation.
+`@restash/restash-js` is a lightweight TypeScript SDK that lets you upload files from the browser directly to the Restash CDN. It handles the full upload lifecycle — getting a presigned URL, streaming the file to S3, and confirming delivery — so you don't have to.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+```typescript
+import { createRestashUploader } from "@restash/restash-js";
 
-## Need inspiration?
+const upload = createRestashUploader({ publicKey: "pk_..." });
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+const result = await upload(file, {
+  path: "uploads/",
+  onProgress: ({ percent }) => console.log(`${percent}%`),
+});
+
+console.log(result.url); // https://cdn.restash.io/...
+```
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Direct browser uploads" icon="arrow-up-from-bracket">
+    Files go straight from the browser to the CDN — no server relay needed.
+  </Card>
+  <Card title="Progress callbacks" icon="gauge">
+    Get byte-level progress events for responsive upload UIs.
+  </Card>
+  <Card title="Signed upload support" icon="key">
+    Require HMAC-SHA256 signatures from your server for secure, authorized uploads.
+  </Card>
+  <Card title="TypeScript-first" icon="brackets-curly">
+    Full type exports for `UploadResult`, `UploadOptions`, and more.
+  </Card>
+  <Card title="File and Blob support" icon="file">
+    Works with both `File` objects from input elements and raw `Blob` data.
+  </Card>
+  <Card title="Custom paths and metadata" icon="folder">
+    Organize uploads into directories and attach arbitrary key-value metadata.
+  </Card>
+</CardGroup>
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install @restash/restash-js
+```
+```bash yarn
+yarn add @restash/restash-js
+```
+```bash pnpm
+pnpm add @restash/restash-js
+```
+</CodeGroup>

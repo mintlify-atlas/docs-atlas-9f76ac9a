@@ -1,0 +1,97 @@
+---
+title: generateSig
+description: Generates a secure HMAC-SHA256 signature for uploads when signature enforcement is enabled on your Restash team.
+---
+
+```typescript
+generateSig(secretKey: string): { payload: string; signature: string }
+```
+
+Generates a secure upload signature using your Restash secret key. The signature uses HMAC-SHA256 with a random UUID and timestamp as the payload, ensuring each signature is unique and time-bound.
+
+<Warning>
+**Server-side only.** This function must be called from your server. Never call `generateSig` in the browser or expose your secret key to the client.
+</Warning>
+
+## Parameters
+
+<ParamField body="secretKey" type="string" required>
+  Your Restash secret API key. Must start with `sk_`. This key is used to sign the upload payload and must be kept confidential.
+</ParamField>
+
+## Return value
+
+<ResponseField name="payload" type="string" required>
+  The signed payload string, consisting of a random UUID and a timestamp. This is sent alongside the signature to verify the request.
+</ResponseField>
+
+<ResponseField name="signature" type="string" required>
+  The HMAC-SHA256 signature of the payload, computed using your secret key.
+</ResponseField>
+
+## Error cases
+
+| Condition | Error thrown |
+| --- | --- |
+| `secretKey` is missing or empty | Throws: secret key is required |
+| `secretKey` starts with `pk_` | Throws: use your secret key, not your public key |
+| Called in a browser environment | Throws: generateSig must be called server-side |
+
+## Usage
+
+The typical pattern is to expose a server route that calls `generateSig` and returns the result. The client-side uploader fetches this route via the `handleSignature` option on [`createRestashUploader`](/api/create-restash-uploader).
+
+<CodeGroup>
+
+```typescript Next.js App Router
+// app/api/restash-signature/route.ts
+import { generateSig } from 'restash';
+
+export async function GET() {
+  const { payload, signature } = generateSig(process.env.RESTASH_SECRET_KEY!);
+
+  return Response.json({ payload, signature });
+}
+```
+
+```typescript Next.js Pages Router
+// pages/api/restash-signature.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { generateSig } from 'restash';
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { payload, signature } = generateSig(process.env.RESTASH_SECRET_KEY!);
+
+  res.status(200).json({ payload, signature });
+}
+```
+
+```typescript Express
+// server.ts
+import express from 'express';
+import { generateSig } from 'restash';
+
+const app = express();
+
+app.get('/api/restash-signature', (req, res) => {
+  const { payload, signature } = generateSig(process.env.RESTASH_SECRET_KEY!);
+  res.json({ payload, signature });
+});
+```
+
+</CodeGroup>
+
+Then pass the route URL to your uploader on the client:
+
+```typescript
+import { createRestashUploader } from 'restash';
+
+const upload = createRestashUploader({
+  publicKey: 'pk_live_abc123',
+  handleSignature: '/api/restash-signature',
+});
+```
+
+<Tip>
+Store your secret key in an environment variable (e.g., `RESTASH_SECRET_KEY`) and never commit it to source control.
+</Tip>

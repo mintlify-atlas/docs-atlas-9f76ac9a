@@ -1,0 +1,194 @@
+---
+title: Progress Tracking
+description: Display real-time upload progress to your users using the onProgress callback.
+---
+
+The `onProgress` callback in `UploadOptions` fires throughout the upload with live byte-level progress data. Use it to drive progress bars, percentage counters, or any other upload feedback UI.
+
+## The `onProgress` callback
+
+```typescript
+type UploadProgress = {
+  percent: number; // 0–100, completion percentage
+  loaded: number;  // bytes transferred so far
+  total: number;   // total bytes in the file
+};
+```
+
+Pass `onProgress` as part of the second argument to the upload function returned by `createRestashUploader`:
+
+```typescript
+import { createRestashUploader } from "@restash/restash-js";
+
+const upload = createRestashUploader({
+  publicKey: process.env.NEXT_PUBLIC_RESTASH_PUBLIC_KEY!,
+});
+
+const result = await upload(file, {
+  onProgress: ({ percent, loaded, total }) => {
+    console.log(`${percent.toFixed(1)}% — ${loaded} of ${total} bytes`);
+  },
+});
+```
+
+<Info>
+  Progress events are powered by axios `onUploadProgress` under the hood, which maps directly to the browser's `XMLHttpRequest` upload progress events. Events fire as data is sent to the server, so progress reaches 100% when the transfer completes — not when the server finishes processing.
+</Info>
+
+## Examples
+
+<CodeGroup>
+
+```tsx React progress bar
+import { useState } from "react";
+import { createRestashUploader } from "@restash/restash-js";
+
+const upload = createRestashUploader({
+  publicKey: process.env.NEXT_PUBLIC_RESTASH_PUBLIC_KEY!,
+});
+
+export function FileUploader() {
+  const [percent, setPercent] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setPercent(0);
+
+    try {
+      const result = await upload(file, {
+        onProgress: ({ percent }) => {
+          setPercent(Math.round(percent));
+        },
+      });
+      setUrl(result.url);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <input type="file" onChange={handleChange} disabled={uploading} />
+      {uploading && (
+        <div>
+          <div
+            role="progressbar"
+            aria-valuenow={percent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            style={{
+              width: `${percent}%`,
+              height: 8,
+              background: "#6366f1",
+              borderRadius: 4,
+              transition: "width 0.1s ease",
+            }}
+          />
+          <p>{percent}%</p>
+        </div>
+      )}
+      {url && <a href={url}>View uploaded file</a>}
+    </div>
+  );
+}
+```
+
+```html Vanilla HTML / JS
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload</title>
+</head>
+<body>
+  <input type="file" id="file-input" />
+  <div id="progress-container" style="display:none">
+    <progress id="progress-bar" value="0" max="100"></progress>
+    <span id="progress-label">0%</span>
+  </div>
+  <p id="result"></p>
+
+  <script type="module">
+    import { createRestashUploader } from "https://esm.sh/@restash/restash-js";
+
+    const upload = createRestashUploader({
+      publicKey: "pk_your_public_key",
+    });
+
+    const input = document.getElementById("file-input");
+    const container = document.getElementById("progress-container");
+    const bar = document.getElementById("progress-bar");
+    const label = document.getElementById("progress-label");
+    const result = document.getElementById("result");
+
+    input.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      container.style.display = "block";
+      bar.value = 0;
+      label.textContent = "0%";
+
+      try {
+        const { url } = await upload(file, {
+          onProgress: ({ percent, loaded, total }) => {
+            bar.value = percent;
+            label.textContent = `${Math.round(percent)}%`;
+          },
+        });
+        result.textContent = `Uploaded: ${url}`;
+      } catch (err) {
+        result.textContent = `Error: ${err.message}`;
+      } finally {
+        container.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
+```
+
+```typescript Node-style (loaded/total bytes)
+import { createRestashUploader } from "@restash/restash-js";
+
+const upload = createRestashUploader({
+  publicKey: process.env.NEXT_PUBLIC_RESTASH_PUBLIC_KEY!,
+});
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 ** 2).toFixed(2)} MB`;
+}
+
+const result = await upload(file, {
+  onProgress: ({ percent, loaded, total }) => {
+    process.stdout.write(
+      `\rUploading: ${formatBytes(loaded)} / ${formatBytes(total)} (${Math.round(percent)}%)`
+    );
+  },
+});
+
+console.log(`\nDone: ${result.url}`);
+```
+
+</CodeGroup>
+
+## Tips
+
+<Tip>
+  Round `percent` to an integer with `Math.round(percent)` before setting UI state to avoid unnecessary re-renders on fractional changes.
+</Tip>
+
+<Tip>
+  Use `loaded` and `total` to display human-readable byte progress (e.g. "2.4 MB / 10 MB") alongside or instead of a percentage for large files.
+</Tip>
+
+<Note>
+  `onProgress` is optional. If omitted, the upload completes normally — you just won't receive intermediate progress events.
+</Note>

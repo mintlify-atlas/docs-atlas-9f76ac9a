@@ -1,0 +1,55 @@
+---
+title: Introduction
+description: Restash JS is a browser TypeScript SDK for uploading files directly to the Restash CDN from client-side code.
+---
+
+Restash JS (`@restash/restash-js`) lets you upload files from the browser straight to the Restash CDN — no server-side proxying required. You configure an uploader once with your public API key, then call it with any `File` or `Blob` to get back a hosted URL.
+
+## How it works
+
+Every upload goes through three steps automatically:
+
+<Steps>
+  <Step title="Prepare">
+    The SDK sends file metadata to `POST https://api.restash.io/v1/uploads/prepare` and receives a presigned S3 URL along with a `confirmToken`.
+  </Step>
+  <Step title="Upload">
+    The file is streamed as `multipart/form-data` directly to the presigned S3 URL. Progress events are available throughout this step.
+  </Step>
+  <Step title="Confirm">
+    The SDK calls `POST https://api.restash.io/v1/uploads/confirm` with the `confirmToken`. Restash finalizes the upload and returns the file's permanent CDN URL and metadata.
+  </Step>
+</Steps>
+
+Your application code only calls one function — the SDK handles the full flow.
+
+## Public key vs signed uploads
+
+Restash supports two upload modes depending on how much control you need over who can upload.
+
+<Columns cols={2}>
+  <Card title="Public key uploads" icon="key">
+    Pass your `publicKey` to `createRestashUploader`. Anyone with access to your front-end code can upload. Suitable for internal tools, prototypes, or applications with their own auth layer.
+  </Card>
+  <Card title="Signed uploads" icon="shield-check">
+    Your server generates an HMAC-SHA256 signature using `generateSig` and your secret key. The SDK sends this signature with the prepare request so Restash can verify the upload is authorized. Use this for production apps where you want server-side control.
+  </Card>
+</Columns>
+
+<Warning>
+  Never use your secret key (`sk_...`) in browser code. Pass it only to `generateSig` on the server. The SDK throws an error if it detects a secret key in `createRestashUploader`.
+</Warning>
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- A Node.js project (any front-end framework is supported)
+- A [Restash account](https://restash.io) with a public API key (`pk_...`)
+- npm, yarn, or pnpm
+
+## Next steps
+
+<Card title="Quickstart" icon="rocket" href="/quickstart">
+  Install the SDK and upload your first file in under five minutes.
+</Card>
