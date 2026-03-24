@@ -1,0 +1,55 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Restash JS",
+  "projectDescription": "A browser SDK for handling client-side file uploads directly to Restash with support for progress tracking and signed uploads.",
+  "theme": "mint",
+  "primaryColor": "#949494",
+  "lightColor": "#b4bcbc",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Guides",
+            "pages": ["guides/signed-uploads", "guides/progress-tracking", "guides/error-handling"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Functions",
+            "pages": ["api/create-restash-uploader", "api/generate-sig"]
+          },
+          {
+            "group": "Types",
+            "pages": ["api/types"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Direct browser-to-CDN file uploads",
+    "Real-time upload progress callbacks",
+    "HMAC-SHA256 signed upload support for secure teams",
+    "Supports File and Blob objects",
+    "Custom file paths and metadata",
+    "TypeScript-first with full type exports"
+  ],
+  "publicApiSurface": [
+    "createRestashUploader(options: RestashUploaderOptions): (file, options) => Promise<UploadResult>",
+    "generateSig(secretKey: string): { payload: string; signature: string }",
+    "UploadProgress",
+    "UploadResult",
+    "UploadOptions",
+    "RestashUploaderOptions"
+  ]
+}
